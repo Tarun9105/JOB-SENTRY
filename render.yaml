@@ -1,0 +1,26 @@
+services:
+  # JobSentry Backend API Service on Render
+  - type: web
+    name: jobsentry-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build:backend
+    startCommand: npm start
+    healthCheckPath: /api/health
+    buildFilter:
+      paths:
+        - backend/**
+        - shared/**
+        - scripts/**
+        - server.ts
+        - package.json
+        - package-lock.json
+        - render.yaml
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: GEMINI_API_KEY
+        sync: false # Set this securely in the Render Dashboard Environment tab

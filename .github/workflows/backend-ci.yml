@@ -1,0 +1,39 @@
+name: Backend CI (Render)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'shared/**'
+      - 'scripts/**'
+      - 'server.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'render.yaml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'shared/**'
+      - 'scripts/**'
+      - 'server.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'render.yaml'
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install Dependencies
+        run: npm ci
+      - name: Build Backend SSOT
+        run: npm run build:backend
+      - name: Verify Backend Entrypoint
+        run: npx tsx --eval "import('./server.ts'); setTimeout(() => process.exit(0), 1000);"

@@ -1,0 +1,9 @@
+{
+  "name": "JobSentry - Fake Job Scanner",
+  "description": "Advisory tool that helps a job applicant check a job posting before applying, so they can see its risk indicator and know what to verify next.",
+  "permissions": [],
+  "capabilities": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
