@@ -1,6 +1,0 @@
-# Cloudflare Pages Redirect & SPA Routing Rules
-# If you prefer Cloudflare to proxy API requests directly to Render, uncomment and edit the Render URL below:
-# /api/*  https://<YOUR-RENDER-SERVICE-NAME>.onrender.com/api/:splat  200
-
-# Single Page Application fallback for Cloudflare Pages
-/*    /index.html   200
