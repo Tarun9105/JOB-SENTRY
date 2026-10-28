@@ -47,7 +47,7 @@ async function startServer() {
     if (fs.existsSync(distPath)) {
       app.use(express.static(distPath));
     }
-    app.get('*', (_req: Request, res: Response) => {
+    app.use((_req: Request, res: Response) => {
       if (fs.existsSync(indexHtml)) {
         res.sendFile(indexHtml);
       } else {
