@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sun, Moon, Server, Menu, X, SlidersHorizontal, Check } from 'lucide-react';
+import { Sun, Moon, Server, Menu, X, SlidersHorizontal, Check, Globe } from 'lucide-react';
 import { AppStage } from '../../shared/contracts';
+import { getApiBaseUrl, setCustomApiUrl } from '../services/api';
 
 interface NavbarProps {
   theme: 'dark' | 'light';
@@ -22,6 +23,29 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [demoMenuOpen, setDemoMenuOpen] = useState<boolean>(false);
   const demoMenuRef = useRef<HTMLDivElement>(null);
+
+  const [backendUrl, setBackendUrl] = useState<string>(getApiBaseUrl());
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'checking' | 'healthy' | 'error'>('idle');
+
+  const testBackendConnection = async (targetUrl: string) => {
+    setConnectionStatus('checking');
+    try {
+      const trimmed = targetUrl.trim().replace(/\/+$/, '');
+      const res = await fetch(`${trimmed}/api/health`);
+      if (res.ok) {
+        setConnectionStatus('healthy');
+      } else {
+        setConnectionStatus('error');
+      }
+    } catch {
+      setConnectionStatus('error');
+    }
+  };
+
+  const handleSaveBackendUrl = () => {
+    setCustomApiUrl(backendUrl);
+    testBackendConnection(backendUrl);
+  };
 
   // Close demo dropdown on click outside or Escape
   useEffect(() => {
@@ -187,6 +211,53 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </label>
                   <p className="text-[10px] text-zinc-500 mt-1">
                     Simulates a backend outage to test user error messaging and retry recovery.
+                  </p>
+                </div>
+
+                {/* Render Backend Connection URL */}
+                <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 text-zinc-500" />
+                      <span>Render API Endpoint</span>
+                    </span>
+                    {connectionStatus === 'healthy' && (
+                      <span className="text-[10px] text-emerald-500 font-mono font-bold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Connected
+                      </span>
+                    )}
+                    {connectionStatus === 'error' && (
+                      <span className="text-[10px] text-rose-500 font-mono font-bold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                        Unreachable
+                      </span>
+                    )}
+                    {connectionStatus === 'checking' && (
+                      <span className="text-[10px] text-zinc-400 font-mono">Testing...</span>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="url"
+                      value={backendUrl}
+                      onChange={(e) => {
+                        setBackendUrl(e.target.value);
+                        setConnectionStatus('idle');
+                      }}
+                      placeholder="https://jobsentry-api.onrender.com"
+                      className="w-full px-2 py-1 text-xs rounded border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-mono focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveBackendUrl}
+                      className="px-2.5 py-1 text-[11px] font-bold rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:opacity-90 transition-opacity whitespace-nowrap"
+                    >
+                      Save
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-1">
+                    Enter your Render URL to link Cloudflare frontend to Render backend immediately.
                   </p>
                 </div>
               </div>

@@ -7,7 +7,7 @@ import {
   Check,
 } from 'lucide-react';
 import { ResearchDatasetMetrics } from '../../shared/contracts';
-import { API_BASE } from '../services/api';
+import { getApiBaseUrl } from '../services/api';
 
 export const ResearchDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'benchmarks' | 'matrix' | 'weights' | 'paper'>('benchmarks');
@@ -16,10 +16,17 @@ export const ResearchDashboard: React.FC = () => {
   const [paperContent, setPaperContent] = useState<string>('');
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/research/metrics`)
-      .then((res) => res.json())
+    const apiBase = getApiBaseUrl();
+    fetch(`${apiBase}/api/research/metrics`)
+      .then((res) => {
+        const ct = res.headers.get('content-type') || '';
+        if (res.ok && ct.includes('application/json')) {
+          return res.json();
+        }
+        return null;
+      })
       .then((data) => {
-        if (data.success) {
+        if (data && data.success) {
           setMetrics(data.data);
         }
       })
