@@ -24,7 +24,7 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 /**
- * Server-Side Gemini 3.8 Flash AI Model Evaluation
+ * Server-Side Gemini 3.8 Flash AI Model Evaluation with Retry Resilience
  * Combines Deep LLM Reasoning with Deterministic Feature Rule Extraction
  */
 export async function analyzeJobWithGemini(
@@ -43,8 +43,7 @@ export async function analyzeJobWithGemini(
     };
   }
 
-  try {
-    const prompt = `Analyze the following job posting submission for employment fraud, scam markers, unverified recruiter contact methods, and upfront fee demands.
+  const prompt = `Analyze the following job posting submission for employment fraud, scam markers, unverified recruiter contact methods, and upfront fee demands.
 
 Job Description Text:
 """
@@ -57,45 +56,74 @@ Salary / Pay: ${req.salary || 'Not provided'}
 
 Evaluate the risk level (Low, Medium, or High), calculate a numerical risk score from 0.00 (Safe) to 1.00 (Critical Scam), list explicit red flag bullet points, and provide recommended verification steps for the candidate.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: prompt,
-      config: {
-        systemInstruction:
-          'You are an expert cybersecurity analyst and employment fraud detection model. Analyze job descriptions for phishing, payment traps, task rating scams, and unmonitored chat channels. Return structured JSON.',
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          required: ['riskLevel', 'score', 'redFlags', 'advice'],
-          properties: {
-            riskLevel: {
-              type: Type.STRING,
-              description: 'Risk assessment category: Low, Medium, or High',
-            },
-            score: {
-              type: Type.NUMBER,
-              description: 'Risk probability score between 0.00 and 1.00',
-            },
-            redFlags: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: 'List of identified deceptive red flag markers',
-            },
-            advice: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: 'Recommended verification steps for job seekers',
-            },
+  const requestConfig = {
+    model: 'gemini-3.8-flash',
+    contents: prompt,
+    config: {
+      systemInstruction:
+        'You are an expert cybersecurity analyst and employment fraud detection model. Analyze job descriptions for phishing, payment traps, task rating scams, and unmonitored chat channels. Return structured JSON.',
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: Type.OBJECT,
+        required: ['riskLevel', 'score', 'redFlags', 'advice'],
+        properties: {
+          riskLevel: {
+            type: Type.STRING,
+            description: 'Risk assessment category: Low, Medium, or High',
+          },
+          score: {
+            type: Type.NUMBER,
+            description: 'Risk probability score between 0.00 and 1.00',
+          },
+          redFlags: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: 'List of identified deceptive red flag markers',
+          },
+          advice: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: 'Recommended verification steps for job seekers',
           },
         },
       },
-    });
+    },
+  };
 
-    const responseText = response.text?.trim();
-    if (!responseText) {
-      return { ...ruleResult, modelType: 'deterministic-nlp-rules' };
+  // Attempt generation with transient 503/429 retry
+  let response: any = null;
+  const maxRetries = 2;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      response = await ai.models.generateContent(requestConfig);
+      break;
+    } catch (err: any) {
+      const isTransient =
+        err?.status === 503 ||
+        err?.message?.includes('high demand') ||
+        err?.message?.includes('UNAVAILABLE') ||
+        err?.status === 429;
+
+      if (isTransient && attempt < maxRetries) {
+        const delayMs = (attempt + 1) * 900;
+        console.warn(`[Gemini AI] 503 demand spike, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
+      }
+      console.warn('[Gemini AI] Server-side analysis notice, using deterministic fallback:', err?.message || err);
+      return {
+        ...ruleResult,
+        modelType: 'deterministic-nlp-rules',
+      };
     }
+  }
 
+  const responseText = response?.text?.trim();
+  if (!responseText) {
+    return { ...ruleResult, modelType: 'deterministic-nlp-rules' };
+  }
+
+  try {
     const parsed = JSON.parse(responseText);
 
     // Normalize AI values
@@ -130,7 +158,7 @@ Evaluate the risk level (Low, Medium, or High), calculate a numerical risk score
       evaluatedAt: new Date().toISOString(),
     };
   } catch (err) {
-    console.warn('[Gemini AI] Server-side analysis notice, using deterministic fallback:', err);
+    console.warn('[Gemini AI] Parse notice, using deterministic fallback:', err);
     return {
       ...ruleResult,
       modelType: 'deterministic-nlp-rules',
