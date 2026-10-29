@@ -58,7 +58,7 @@ Salary / Pay: ${req.salary || 'Not provided'}
 Evaluate the risk level (Low, Medium, or High), calculate a numerical risk score from 0.00 (Safe) to 1.00 (Critical Scam), list explicit red flag bullet points, and provide recommended verification steps for the candidate.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: prompt,
       config: {
         systemInstruction:
@@ -125,7 +125,7 @@ Evaluate the risk level (Low, Medium, or High), calculate a numerical risk score
       red_flags: mergedFlags.length > 0 ? mergedFlags : ['No primary high-risk triggers detected'],
       advice: mergedAdvice,
       factors: req.stage === 'staging' ? ruleResult.factors : undefined,
-      modelType: 'hybrid-gemini-2.5-flash',
+      modelType: 'hybrid-gemini-3.8-flash',
       stage: req.stage,
       evaluatedAt: new Date().toISOString(),
     };

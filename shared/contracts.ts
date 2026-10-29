@@ -99,7 +99,7 @@ export const JobCheckOutputSchema = z.object({
   red_flags: z.array(z.string()), // wire compatibility
   advice: z.array(z.string()),
   factors: z.array(RiskFactorDetailSchema).optional(),
-  modelType: z.enum(['hybrid-gemini-2.5-flash', 'hybrid-gemini-3.8-flash', 'deterministic-nlp-rules', 'scikit-learn-tfidf']).default('hybrid-gemini-2.5-flash'),
+  modelType: z.enum(['hybrid-gemini-2.5-flash', 'hybrid-gemini-3.8-flash', 'deterministic-nlp-rules', 'scikit-learn-tfidf']).default('hybrid-gemini-3.8-flash'),
   stage: z.enum(['staging', 'production']),
   evaluatedAt: z.string(),
 });
